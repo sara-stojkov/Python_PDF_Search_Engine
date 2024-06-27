@@ -1,5 +1,4 @@
 class Graph:
-
     """ Implementacija usmerenog grafa (potreban za PageRank)"""
 
     class Vertex:   # ugnježdena klasa čvora grafa
@@ -82,7 +81,7 @@ class Graph:
         self._validate_vertex(v)
         return self._outgoing[u].get(v)
 
-    def degree(self, v, incoming = True): # vraća stepen čvora v, incoming=True za ulazne, False za izlazne -  za stranice će nam trebati ulazne
+    def degree(self, v, incoming=True): # vraća stepen čvora v, incoming=True za ulazne, False za izlazne -  za stranice će nam trebati ulazne
         self._validate_vertex(v)
         adj = self._incoming if incoming else self._outgoing
         return len(adj[v])
@@ -104,5 +103,5 @@ class Graph:
         if self.get_edge(u, v) is not None:      # proverava da li su čvorovi već susedni
             raise ValueError('u and v are already adjacent')
         e = self.Edge(u, v, x)
-        self._outgoing[u][v] = e
+        self._outgoing[u][v] = e 
         self._incoming[v][u] = e

@@ -1,14 +1,19 @@
 import fitz  
 import pickle
 import os
-from structures import trie
+import re
+from structures.trie import Trie, NodeInfo, TrieNode
+from structures.graph import Graph
 
 def load_and_parse(file_path):
     try:
         load_pages(file_path)
         print("PDF successfully converted to text files.")
         trie_structure = load_words_into_trie()
-        return trie_structure
+        graph, vertices = build_reference_graph()
+        save_graph(graph, "reference_graph.pickle")
+        print("Reference graph successfully built and saved.")
+        return trie_structure, graph, vertices
     except Exception as e:
         print(f"An error occurred while loading and parsing the PDF: {e}")
         return None
@@ -32,7 +37,7 @@ def load_words_into_trie():
         if not os.path.exists(directory):
             os.makedirs(directory)
         
-        trie_structure = trie.Trie()
+        trie_structure = Trie()
         total_words_inserted = 0
         pages_processed = 0
 
@@ -49,7 +54,7 @@ def load_words_into_trie():
                     word_positions[word].append(position)
                 for word, positions in word_positions.items():
                     occurrences = len(positions)
-                    node_info = trie.NodeInfo(page_number, positions, occurrences)
+                    node_info = NodeInfo(page_number, positions, occurrences)
                     trie_structure.insert(word, node_info)
                     total_words_inserted += occurrences
             pages_processed += 1
@@ -65,5 +70,39 @@ def load_words_into_trie():
         print(f"An error occurred while loading words into trie: {e}")
         return None
 
-def page_rank_graphing():
-    pass
+def load_page_text(page_number):
+    file_path = f"./txts/page_{page_number}.txt"
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as file:
+            return file.read()
+    return ""
+
+def build_reference_graph(offset=22):
+    graph = Graph(directed=True)
+    reference_pattern = re.compile(r'\b(?:from|on|see|as described on|as discussed on|refer to|in)\s+(?:page|pg|p)\s+(\d{1,3})\b', re.IGNORECASE)
+    
+    vertices = {}
+    for page in range(1, 771):
+        page_text = load_page_text(page)
+        if page_text:
+            page_vertex = vertices.get(page)
+            if not page_vertex:
+                page_vertex = graph.insert_vertex(page)
+                vertices[page] = page_vertex
+
+            matches = reference_pattern.findall(page_text)
+            for match in matches:
+                referenced_page = int(match)
+                actual_referenced_page = referenced_page + offset  # Adjust for offset
+                if 1 <= actual_referenced_page <= 770:
+                    referenced_page_vertex = vertices.get(actual_referenced_page)
+                    if not referenced_page_vertex:
+                        referenced_page_vertex = graph.insert_vertex(actual_referenced_page)
+                        vertices[actual_referenced_page] = referenced_page_vertex
+                    graph.insert_edge(page_vertex, referenced_page_vertex)
+
+    return graph, vertices
+
+def save_graph(graph, filename):
+    with open(filename, "wb") as file:
+        pickle.dump(graph, file)

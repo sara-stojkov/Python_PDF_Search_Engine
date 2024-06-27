@@ -11,6 +11,7 @@ def main(file_path):
         return
     
     while True:
+        print("\n------------------------------")
         query = str(input("Unesite reči koje želite pretražiti ili unesite x za izlazak:  "))
         if query == "x":
             break
