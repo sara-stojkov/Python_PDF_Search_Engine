@@ -1,31 +1,29 @@
 import os
 from structures import trie
+import re
 
 def highlight_term(text, term):
     return text.replace(term, f"\033[1;32;40m{term}\033[0m")
 
 def get_sentence_context(text, position, term, context_sentences=2):
-    import re
     sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
-    cumulative_length = 0
-    term_sentence_idx = None
-    for i, sentence in enumerate(sentences):
-        cumulative_length += len(sentence) + 1  # +1 for the removed space
-        if cumulative_length > position:
-            term_sentence_idx = i
+    term_sentence_idx = -1
+
+    for idx, sentence in enumerate(sentences):
+        if term in sentence:
+            term_sentence_idx = idx
             break
-    if term_sentence_idx is None:
-        return "", ""
-    term_sentence = sentences[term_sentence_idx].strip()
-    highlighted_sentence = highlight_term(term_sentence, term)
+
+    if term_sentence_idx == -1:
+        return None, None
 
     start_idx = max(0, term_sentence_idx - context_sentences)
-    end_idx = min(len(sentences), term_sentence_idx + 1 + context_sentences)
+    end_idx = min(len(sentences), term_sentence_idx + context_sentences + 1)
 
-    context_sentences_list = sentences[start_idx:end_idx]
-    context_text = ". ".join(context_sentences_list).strip()
-
-    return highlighted_sentence, context_text
+    context = " ".join(sentences[start_idx:end_idx])
+    highlighted_sentence = sentences[term_sentence_idx].replace(term, f"[{term}]")
+    
+    return highlighted_sentence, context
 
 def search_and_display_results(results, term, start_rank=1, results_per_page=10, context_sentences=2):
     if not results:
@@ -49,13 +47,12 @@ def search_and_display_results(results, term, start_rank=1, results_per_page=10,
         print(f"Occurrences: {result.occurrences}")
 
         page_text = load_page_text(result.page)
-
         if page_text:
             for position in result.positions:
                 highlighted_sentence, context = get_sentence_context(page_text, position, term, context_sentences)
 
                 if highlighted_sentence and context:
-                    print(f"Context: {context}")
+                    print(f"Context:\n{context}")
                     print()
 
         rank += 1
