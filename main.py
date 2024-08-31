@@ -1,6 +1,43 @@
 import search_engine.load_parse as lp
 import search_engine.search as s
-import search_engine.additions as add
+import fitz  
+
+
+def save_results_to_file(search_results, query, file_path):
+    """Funkcija koja čuva prvih 10 rezultata pretrage u obliku PDF-a."""
+    original_doc = fitz.open(file_path)
+    output_doc = fitz.open()
+
+    for page_number in search_results:
+        page = original_doc.load_page(page_number - 1)
+        output_page = output_doc.new_page(width=page.rect.width, height=page.rect.height)
+        output_page.show_pdf_page(output_page.rect, original_doc, page_number - 1)
+        if len(query) == 1:
+            highlight_query_on_page(output_page, [query])
+        else:
+            highlight_query_on_page(output_page, query.split())
+
+    output_filename = f"{query.replace(' ', '_')}_search_results.pdf"
+    if "AND" in query or "OR" in query or "NOT" in query:
+        output_filename = f"{query.replace(' ', '_')}_search_results.pdf"
+    try:
+        output_doc.save(output_filename)
+    except Exception as e:
+        print(f"Error saving the file: {e}")
+        output_filename = f"{query[1:-1].replace(' ', '_')}__search_results.pdf"
+    finally:
+        output_doc.close()
+        original_doc.close()
+    print(f"Search results saved in file '{output_filename}'.")
+
+def highlight_query_on_page(page, queries):
+    for query in queries:
+        if query=="AND" or query=="OR" or query=="NOT":
+            continue
+        text_instances = page.search_for(query)
+        for inst in text_instances:
+            highlight = page.add_highlight_annot(inst)
+            highlight.update()
 
 def main(file_path):
     print("----------------------------------\n  Pretrazivač teksta u PDF fajlu\n---------------------------------\n")
@@ -19,19 +56,22 @@ def main(file_path):
         elif query == "":
             print("Molimo unesite reči za pretragu.")
             continue
-        elif query in {"AND", "OR", "NOT"}:
+        elif query in {"AND", "OR", "NOT", "()", "(", ")"}:
             print("Reči AND, NOT i OR su rezervisane za logičko pretraživanje.")
             continue
         print(f"Pretraživanje po upitu '{query}'...")
-        s.search_query(query, trie_structure, graph, 2, txt_directory="txts")
-        # save_to_pdf = input("Da li želite da sačuvate prvih 10 rezultata pretrage u zaseban PDF? (unesite 'DA' ili 'NE')  --->  ")
-        # if save_to_pdf == "DA":
-        #     add.save_results_to_pdf(text_output)
-        highlight_the_word = input("Da li želite da highlightujete ovu reč u celom dokumentu? (unesite 'DA' ili 'NE')  --->  ")
-        if highlight_the_word == "DA":
-            add.highlight_word_in_pdf
+        search_results = s.search_query(query, trie_structure, graph, 2, txt_directory="txts")
+                
+        if search_results is None:
+            print("Pošto nije bilo rezultata, nije moguće čuvanje rezultata u PDF.")
+            continue
+
+        save_results_to_pdf = input("Da li želite da prvih 10 rezultata pretrage u zasebnom dokumentu? (unesite 'DA' ili 'NE')  --->  ")
+        if save_results_to_pdf.upper() == "DA":
+            save_results_to_file(search_results, query, file_path) # query će se koristiti za naziv fajla
 
 if __name__ == "__main__":
     main("./pdf/Data Structures and Algorithms in Python.pdf")
     print("\n----------------------------------")
     print("Hvala na korišćenju pretraživača teksta u PDF fajlu!")
+    print("************************************")
