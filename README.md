@@ -1,5 +1,5 @@
 # PDF Search Engine in Python
-A python project that allows for a quick **search through any PDF and ranks the results** based on both the number of occurrences of the search query on the page, as well as the 'page rank' of the page (how many times have other pages referenced the current page). The works through a console menu.
+A python project that allows for a quick **search through any PDF and ranks the results** based on both the number of occurrences of the search query on the page, as well as the 'page rank' of the page (how many times have other pages referenced the current page). The app works with a console menu, although it may be interesting to make this into a gui app.
 
 ![image](https://github.com/user-attachments/assets/f546da60-0095-4577-82a2-eea0f0d5104e)
 
