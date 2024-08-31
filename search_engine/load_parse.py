@@ -2,10 +2,11 @@ import fitz
 import pickle
 import os
 import re
+from collections import defaultdict
 from structures.trie import Trie, NodeInfo
 from structures.graph import Graph
 
-# Constants
+# Konstante
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TXT_DIR = os.path.join(BASE_DIR, "txts")
 TRIE_PICKLE = os.path.join(BASE_DIR, "parsed_trie.pickle")
@@ -16,7 +17,7 @@ def load_and_parse(file_path):
     try:
         if os.path.exists(TRIE_PICKLE) and os.path.exists(GRAPH_PICKLE):
             trie_structure, graph, vertices = load_pickle_files()
-            print("Raniji trie i graf učitani iz pickle fajlova.")
+            print("Prethodno napravljeni trie i graf učitani iz pickle fajlova.")
             return trie_structure, graph, vertices
 
         pdf_document = fitz.open(file_path)
@@ -26,13 +27,15 @@ def load_and_parse(file_path):
 
         print("PDF uspešno učitan u txt fajlove.")
         trie_structure = load_words_into_trie()
-        graph, vertices = build_reference_graph(pdf_page_count)
+        term_occurrences = count_word_occurrences(pdf_page_count)  
+        graph, vertices = build_reference_graph(pdf_page_count, term_occurrences)  
         save_graph(graph, GRAPH_PICKLE)
-        print("Graf referenci uspešno napravljen i sačuvan u pickle fajlu.")
+        print("Graf referenci  i trie uspešno napravljeni i sačuvani u pickle fajlu.")
         return trie_structure, graph, vertices
     except Exception as e:
         print(f"Došlo je do greške pri parsiranju PDF-a: {e}")
         return None, None, None
+
 
 def load_pickle_files():
     with open(TRIE_PICKLE, "rb") as trie_file, open(GRAPH_PICKLE, "rb") as graph_file:
@@ -95,27 +98,44 @@ def load_page_text(page_number):
             return file.read()
     return ""
 
-def build_reference_graph(pdf_page_count, offset=PAGE_OFFSET):
+def build_reference_graph(pdf_page_count, term_occurrences, offset=PAGE_OFFSET):
     graph = Graph(directed=True)
     reference_pattern = re.compile(r'\b(?:from|on|see|as described on|as discussed on|refer to|in)\s+(?:page|pg|p)\s+(\d{1,3})\b', re.IGNORECASE)
     
     vertices = {}
+    page_term_counts = defaultdict(int)
+    
     for page in range(1, pdf_page_count + 1):
         page_text = load_page_text(page)
         if page_text:
             page_vertex = vertices.get(page, graph.insert_vertex(page))
             vertices[page] = page_vertex
 
+            for term, count in term_occurrences.get(page, {}).items():
+                page_term_counts[page] += count
+
             matches = reference_pattern.findall(page_text)
             for match in matches:
                 referenced_page = int(match)
-                actual_referenced_page = referenced_page + offset  # Adjust for offset
+                actual_referenced_page = referenced_page + offset  
                 if 1 <= actual_referenced_page <= pdf_page_count:
                     referenced_page_vertex = vertices.get(actual_referenced_page, graph.insert_vertex(actual_referenced_page))
                     vertices[actual_referenced_page] = referenced_page_vertex
-                    graph.insert_edge(page_vertex, referenced_page_vertex)
+                    
+                    edge_weight = page_term_counts[page] * 0.4 + term_occurrences[page].get("see", 0) * 0.6
+                    graph.insert_edge(page_vertex, referenced_page_vertex, x=edge_weight)
 
     return graph, vertices
+
+def count_word_occurrences(pdf_page_count):
+    term_occurrences = defaultdict(lambda: defaultdict(int))
+    for page in range(1, pdf_page_count + 1):
+        page_text = load_page_text(page)
+        if page_text:
+            words = re.findall(r'\b\w+\b', page_text.lower())
+            for word in words:
+                term_occurrences[page][word] += 1
+    return term_occurrences
 
 def save_graph(graph, filename):
     with open(filename, "wb") as file:
