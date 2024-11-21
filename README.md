@@ -16,5 +16,8 @@ The pages of the PDF were organized in a **graph**, and a **trie** was used for 
 - *os, re* - used os and re for writing, creating files and regular expressions
 
 ## Features
-The app supports 1 word search, multiple word searches, logical operators (and, or and binary not), it handles searching for a phrase, autocomplete and a 'did you mean' feature which gets triggered if there are no search results. As an additional feature, a
+The app supports 1 word search, multiple word searches, logical operators (and, or and binary not), it handles searching for a phrase, autocomplete and a 'did you mean' feature which gets triggered if there are no search results. As an additional feature, you can save the search results in a separate PDF file, which extracts them and highlights the term you were searching for, as you can see here:
+
+![image](https://github.com/user-attachments/assets/ab5e417a-53b8-45d8-8985-8e5d7073fb5d)
+
 
